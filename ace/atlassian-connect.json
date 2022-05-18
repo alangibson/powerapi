@@ -1,0 +1,105 @@
+{
+    "key": "powerapi",
+    "name": "PowerAPI",
+    "description": "A powerful API documentation tool",
+    "vendor": {
+        "name": "Alan Gibson",
+        "url": "https://powerplantuml.firebaseapp.com"
+    },
+    "baseUrl": "{{localBaseUrl}}",
+    "authentication": {
+        "type": "jwt"
+    },
+    "lifecycle": {
+        "installed": "/installed",
+        "uninstalled": "/uninstalled",
+        "enabled": "/enabled",
+        "disabled": "/disabled"
+    },
+    "scopes": [
+        "READ",
+        "WRITE"
+    ],
+    "apiMigrations": {
+        "gdpr": true,
+        "signed-install": true
+    },
+    "dialogs": [
+        {
+            "url": "/dialog",
+            "options": {
+                "size": "fullscreen",
+                "header": {
+                    "value": "PowerPlant UML Dialog"
+                },
+                "chrome": false,
+                "closeOnEscape": true
+            },
+            "key": "powerapi-dialog"
+        }
+    ],
+    "modules": {
+        "dynamicContentMacros": [
+            {
+                "key": "powerapi-dynamic-macro",
+                "name": {
+                    "value": "powerapi"
+                },
+                "url": "/dynamic-macro?pageId={page.id}&pageVersion={page.version}&macroId={macro.id}",
+                "outputType": "block",
+                "featured": true,
+                "bodyType": "plain-text",
+                // TODO set to true when we no longer have query params
+                // but instead use context from AP
+                // https://developer.atlassian.com/cloud/jira/platform/cacheable-app-iframes-for-connect-apps/#getting-context
+                "cacheable": false,
+                "parameters": [ ],
+                "editor": {
+                    "url": "/editor",
+                    "editTitle": {
+                        "value": "Edit PowerAPI"
+                    },
+                    "insertTitle": {
+                        "value": "Insert PowerAPI"
+                    },
+                    "cacheable": false,
+                    "width": "100%",
+                    "height": "100%"
+                },
+                "icon": {
+                    "width": 128,
+                    "height": 128,
+                    "url": "/logo.png"
+                }
+            }
+        ],
+        "generalPages": [
+            {
+                "key": "hello-world-page-jira",
+                "location": "system.top.navigation.bar",
+                "name": {
+                    "value": "Hello World"
+                },
+                "url": "/hello-world",
+                "conditions": [
+                    {
+                        "condition": "user_is_logged_in"
+                    }
+                ]
+            },
+            {
+                "key": "hello-world-page-confluence",
+                "location": "system.header/left",
+                "name": {
+                    "value": "Hello World"
+                },
+                "url": "/hello-world",
+                "conditions": [
+                    {
+                        "condition": "user_is_logged_in"
+                    }
+                ]
+            }
+        ]
+    }
+}

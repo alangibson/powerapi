@@ -1,0 +1,28 @@
+{
+  "extends": "@tsconfig/svelte/tsconfig.json",
+  "compilerOptions": {
+  //   "lib": ["es6", "dom"],
+  //   "module": "commonjs",
+  //   "baseUrl": ".",
+  //   "noImplicitReturns": true,
+  //   "outDir": "lib",
+  //   "sourceMap": true,
+  //   "target": "es6",
+  //   "esModuleInterop": true,
+  //   // https://github.com/RobinBuschmann/sequelize-typescript
+  //   "experimentalDecorators": true,
+    // "emitDecoratorMetadata": true,
+    // "allowSyntheticDefaultImports": true,
+  //   "moduleResolution": "node",
+  //   "isolatedModules": true,
+  //   "rootDir": "."
+    "types": [
+      "jest", 
+      "svelte"
+      // , "atlassian-connect"
+    ]
+  },
+  // "compileOnSave": true,
+  "include": [".", "src/**/*", "src/node_modules/**/*"],
+  "exclude": ["node_modules/*", "__sapper__/*", "static/*", "**/*.spec.ts", "**/*.test.ts"]
+}
