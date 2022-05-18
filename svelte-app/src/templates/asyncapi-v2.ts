@@ -1,4 +1,4 @@
-module.exports = {
+export default {
     "asyncapi": "2.3.0",
     "info": {
       "title": "Streetlights MQTT API",

@@ -1,4 +1,4 @@
-module.exports = {
+export default {
     "title": "A JSON Schema for Swagger 2.0 API.",
     "id": "http://swagger.io/v2/schema.json#",
     "$schema": "http://json-schema.org/draft-04/schema#",

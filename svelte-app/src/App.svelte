@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import { EditorView, basicSetup } from "@codemirror/basic-setup";
   import { EditorState, Compartment } from "@codemirror/state";
   import { lineNumbers, keymap } from "@codemirror/view";
@@ -12,8 +12,8 @@
   import AjvDraft04 from "ajv-draft-04";
   import addFormats from "ajv-formats";
   import yaml from "js-yaml";
-  import SwaggerUiComponent from "./components/SwaggerUI";
-  import DropdownMenu from "./components/DropdownMenu";
+  import SwaggerUiComponent from "./components/SwaggerUI.svelte";
+  import DropdownMenu from "./components/DropdownMenu.svelte";
   import OpenApiV3Template from "./templates/openapi-v3";
   import AsyncApiV3Template from "./templates/asyncapi-v2";
   import SwaggerV2Template from "./templates/swagger-v2";

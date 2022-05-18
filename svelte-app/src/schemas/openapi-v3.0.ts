@@ -1,4 +1,4 @@
-module.exports = {
+export default {
     "id": "https://spec.openapis.org/oas/3.0/schema/2021-09-28",
     "$schema": "http://json-schema.org/draft-04/schema#",
     "description": "The description of OpenAPI v3.0.x documents, as defined by https://spec.openapis.org/oas/v3.0.3",

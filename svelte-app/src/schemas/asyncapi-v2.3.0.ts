@@ -1,4 +1,4 @@
-module.exports = {
+export default {
     "title": "AsyncAPI 2.3.0 schema.",
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
