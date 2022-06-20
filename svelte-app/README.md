@@ -3,13 +3,11 @@
 
 - Save settings to local browser storage
 - Allow resizing editor width
-- Support Typescript
-- Confluence endpoints
 
 - Support Graphviz: https://github.com/aduh95/viz.js
 - Support DBML: https://github.com/softwaretechnik-berlin/dbml-renderer
 - Support GraphQL: https://github.com/graphql/graphiql
-- Support Mermaid: https://mermaid-js.github.io
+- Support Mermaid: https://mermaid-js.github.io, https://github.com/mermaid-js/mermaid-live-editor
 
 ## Get started
 

@@ -12,9 +12,11 @@
 
   let showTooltip = false;
 
+  // Exported props
   export let callbackNewSwaggerV2;
   export let callbackNewOpenApiV3;
   export let callbackNewAsyncApiV2;
+  export let callbackNewMermaid;
 
   function handleClick() {
     showTooltip = !showTooltip;
@@ -34,6 +36,11 @@
     callbackNewAsyncApiV2();
     handleClick();
   }
+
+  function handleNewMermaid() {
+    callbackNewMermaid();
+    handleClick();
+  }
 </script>
 
 <button use:popperRef on:click={handleClick}> New </button>
@@ -42,6 +49,7 @@
     <li on:click={handleNewSwaggerV2}>Swagger (v2)</li>
     <li on:click={handleNewOpenApiV3}>OpenAPI (v3)</li>
     <li on:click={handleNewAsyncApiV2}>AsycAPI (v2)</li>
+    <li on:click={handleNewMermaid}>Mermaid</li>
   </ul>
 {/if}
 

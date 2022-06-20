@@ -8,62 +8,98 @@
   import { json } from "@codemirror/lang-json";
   import { StreamLanguage } from '@codemirror/language';
   import { yaml as yamlMode } from "@codemirror/legacy-modes/mode/yaml"
-  import Ajv from "ajv";
+  import Ajv, { stringify } from "ajv";
   import AjvDraft04 from "ajv-draft-04";
   import addFormats from "ajv-formats";
   import yaml from "js-yaml";
+  import type { Schema } from './lib';
   import SwaggerUiComponent from "./components/SwaggerUI.svelte";
+  import MermaidUiComponent from "./components/MermaidUi.svelte";
   import DropdownMenu from "./components/DropdownMenu.svelte";
+  // Templates
   import OpenApiV3Template from "./templates/openapi-v3";
   import AsyncApiV3Template from "./templates/asyncapi-v2";
   import SwaggerV2Template from "./templates/swagger-v2";
+  import MermaidTemplate from './templates/mermaid';
+  // Default schemas
   import AsyncApi200Schema from "./schemas/asyncapi-v2.0.0";
   import Swagger20Schema from "./schemas/swagger-v2.0";
   import OpenApi30Schema from "./schemas/openapi-v3.0";
   import OpenApi31Schema from "./schemas/openapi-v3.1";
 
+  enum DocumentFormat {
+    JSON = 'json',
+    YAML = 'yaml',
+    MERMAID = 'mermaid'
+  }
+
+  enum DocumentGrammar {
+    AUTO = 'auto',
+    OPENAPI = 'openapi',
+    ASYNCAPI = 'asyncapi',
+    MERMAID = 'mermaid'
+  }
+
   // Should we autodetect document format?
   // let shouldAutodetectDocFormat = true;
 
-  let hasConfluence = true;
+  let hasConfluence: boolean = true;
 
+  // Format of document displayed in editor.
   // One of 'yaml', 'json', 'mermaid', 'plantuml'
-  let docFormat = "json";
+  let docFormat: DocumentFormat = DocumentFormat.JSON;
+
   // Document text
-  let text = "{}"; // string
+  let text: string = "{}"; // string
 
   // Editor configuration
-  let tabSpaces = 2;
+  let tabSpaces: number = 2;
+  
   // CodeMirror object
-  let editor;
+  // Set in initCodeMirror(), which is called in onMount()
+  let editor: EditorView;
 
-  let asyncApiConfig = {};
+  let asyncApiConfig: object = {};
 
   // Reactively parse editor content, frequently catching JSON parse error
-  $: [schema, parseError] = loadParser(text, docFormat);
+  $: [schema, parseError] = parseDocumentText(text, docFormat);
 
   // Reactively detect document type
   // Either openapi, asyncapi or auto for autodetection
-  $: [docType, docTypeVersion] = detectDocType(schema, 'auto');
-
-  // TODO Reactively detect document format
+  // $: [docGrammar, docGrammarVersion] = detectDocGrammar(schema, DocumentGrammar.AUTO);
+  let docGrammar: DocumentGrammar = DocumentGrammar.AUTO;
+  let docGrammarVersion: string;
 
   // Reactively define and execute document validator
-  $: validator = loadValidator(docType, docTypeVersion);
+  $: validator = loadValidator(docGrammar, docGrammarVersion);
 
   // let valid = false;
   // let validationError = null;
   $: [valid, validationError] = validate(validator, schema);
 
-  function detectDocType(schema, defaultType) {
+  /* Detect if schema is a Mermaid document */
+  function isMermaid(schema: Schema): boolean {
+    const headers = ['graph', 'sequenceDiagram', 'classDiagram', 'stateDiagram', 
+      'stateDiagram-v2', 'gantt', 'pie', 'erDiagram', 'journey', 'gitGraph'];
+    const header = schema?.body.split(/\r\n|\r|\n/)?.[0].trim().split(' ')?.[0].trim();
+    console.debug('Detected Mermaid header type');
+    return headers.includes(header);
+  }
+
+  /* Detect document type by introspecting schema
+   * TODO This is seems dumb. Won't we always know the type of diagram?
+   */
+  function detectDocGrammar(schema: Schema, defaultType: DocumentGrammar): [DocumentGrammar, string] {
     try {
       console.debug("Autodetecting document type");
       if (schema.openapi) 
-        return ["openapi", schema.openapi];
+        return [DocumentGrammar.OPENAPI, schema.openapi];
       else if (schema.swagger)
-      return ["openapi", schema.swagger];
+      return [DocumentGrammar.OPENAPI, schema.swagger];
       else if (schema.asyncapi) 
-        return ["asyncapi", schema.asyncapi];
+        return [DocumentGrammar.ASYNCAPI, schema.asyncapi];
+      else if (isMermaid(schema))
+        return [DocumentGrammar.MERMAID, '1'];
       else
         return [defaultType, null];
     } catch (e) {
@@ -73,13 +109,15 @@
     }
   }
 
-  /* Create a document parser */
-  function loadParser(text, docFormat) {
+  // Create a document parser for either json or yaml.
+  function parseDocumentText(text: string, docFormat: DocumentFormat): [Schema, string] {
     try {
-      if (docFormat == "json") 
+      if (docFormat == DocumentFormat.JSON) 
         return [JSON.parse(text), null];
-      else if (docFormat == 'yaml') 
+      else if (docFormat == DocumentFormat.YAML) 
         return [yaml.load(text), null];
+      else if (docFormat == DocumentFormat.MERMAID)
+        return [ { mermaid: '1', body: text } , null];
       else 
         return [null, `Document format ${docFormat} not supported yet`]
     } catch (e) {
@@ -88,21 +126,23 @@
   }
 
   /* Create a schema validator */
-  function loadValidator(docType, docTypeVersion) {
-    console.debug("loadDocumentSchema", docType, docTypeVersion);
+  function loadValidator(docGrammar: DocumentGrammar, docGrammarVersion: string) {
+    console.debug("loadDocumentSchema", docGrammar, docGrammarVersion);
     const params = { strict: false };
-    if (docType == "asyncapi" && docTypeVersion == "2.0.0")
+    if (docGrammar == DocumentGrammar.ASYNCAPI && docGrammarVersion == "2.0.0")
       return addFormats(new Ajv(params)).compile(AsyncApi200Schema);
-    else if (docType == "openapi" && docTypeVersion == "2.0")
+    else if (docGrammar == DocumentGrammar.OPENAPI && docGrammarVersion == "2.0")
       return addFormats(new AjvDraft04(params)).compile(Swagger20Schema);
-    else if (docType == "openapi" && docTypeVersion == "3.0")
+    else if (docGrammar == DocumentGrammar.OPENAPI && docGrammarVersion == "3.0")
       return addFormats(new AjvDraft04(params)).compile(OpenApi30Schema);
-    else if (docType == "openapi" && docTypeVersion == "3.1")
+    else if (docGrammar == DocumentGrammar.OPENAPI && docGrammarVersion == "3.1")
       return addFormats(new Ajv(params)).compile(OpenApi31Schema);
+    else
+      console.warn(`No validator found for ${docGrammar} ${docGrammarVersion}`);
   }
 
   /* Returns valid boolean and validation error object */
-  function validate(validator, schema) {
+  function validate(validator, schema: Schema) {
     if (validator && schema) {
       try {
         return [validator(schema), validator.errors];
@@ -124,11 +164,15 @@
       return { effects: languageConf.reconfigure(json()) };
     else if (docFormat == 'yaml')
       return { effects: languageConf.reconfigure(StreamLanguage.define(yamlMode)) };
-    // TODO support other languages
+    else
+      return { effects: null };
+    // TODO support Mermaid
   });
 
-  /* Initialize CodeMirror editor element */
-  function initCodeMirror() {
+  /* Initialize CodeMirror editor element
+   * When the editor contents change, the global 'text' var is updated.
+   */
+  function initCodeMirror(): void {
     editor = new EditorView({
       state: EditorState.create({
         extensions: [
@@ -140,6 +184,7 @@
           lineNumbers(),
           // TODO typescript -> v: ViewUpdate
           EditorView.updateListener.of((v) => {
+            // This is the line that causes the global 'text' var to be updated
             if (v.docChanged) text = v.state.doc.toString();
           }),
         ],
@@ -149,21 +194,31 @@
   }
 
   /* Toggle between json and yaml */
-  function toggleJsonYaml() {
+  function toggleJsonYaml(): void {
     // TODO don't toggle if there is an error condition in the editor content
     let newText;
-    if (docFormat == "yaml") {
+    if (docFormat == DocumentFormat.YAML) {
       newText = JSON.stringify(schema, null, tabSpaces);
-      docFormat = "json";
-    } else if (docFormat == "json") {
+      docFormat = DocumentFormat.JSON;
+    } else if (docFormat == DocumentFormat.JSON) {
       newText = yaml.dump(schema);
-      docFormat = "yaml";
+      docFormat = DocumentFormat.YAML;
     }
-    setEditorContents(newText);
+    setEditorContents(newText, docGrammar);
   }
 
   /* Set the contents of the editor window to the provided string */
-  function setEditorContents(text) {
+  function setEditorContents(text: string, newDocGrammar: DocumentGrammar): void {
+    // Save the document grammar
+    docGrammar = newDocGrammar;
+
+    // HACK Special case for Mermaid
+    if (docGrammar == DocumentGrammar.MERMAID)
+      docFormat = DocumentFormat.MERMAID;
+    else
+      docFormat = DocumentFormat.JSON;
+
+    // Update the editor text
     editor.dispatch({
       changes: {
         from: 0,
@@ -173,16 +228,11 @@
     });
   }
 
-  function newDoc(editor, spec) {
-    // TODO don't assume JSON
-    setEditorContents(JSON.stringify(spec, null, tabSpaces));
+  function confluenceSave(): void {
+    console.warn(`Should save to Confluence: docGrammar=${docGrammar}, docGrammarVersion=${docGrammarVersion}, docFormat=${docFormat}, text=${text}`);
   }
 
-  function confluenceSave() {
-    console.warn(`Should save to Confluence: docType=${docType}, docTypeVersion=${docTypeVersion}, docFormat=${docFormat}, text=${text}`);
-  }
-
-  function confluenceCancel() {
+  function confluenceCancel(): void {
     console.warn(`Should cancel and go back to Confluence`);
   }
 
@@ -196,26 +246,27 @@
     PowerAPI 
 
     <DropdownMenu
-      callbackNewOpenApiV3={() => newDoc(editor, OpenApiV3Template)}
-      callbackNewAsyncApiV2={() => newDoc(editor, AsyncApiV3Template)}
-      callbackNewSwaggerV2={() => newDoc(editor, SwaggerV2Template)}
+      callbackNewOpenApiV3={() => setEditorContents(JSON.stringify(OpenApiV3Template, null, tabSpaces), DocumentGrammar.OPENAPI)} 
+      callbackNewAsyncApiV2={() => setEditorContents(JSON.stringify(AsyncApiV3Template, null, tabSpaces), DocumentGrammar.ASYNCAPI)}
+      callbackNewSwaggerV2={() => setEditorContents(JSON.stringify(SwaggerV2Template, null, tabSpaces), DocumentGrammar.OPENAPI)}
+      callbackNewMermaid={() => setEditorContents(MermaidTemplate, DocumentGrammar.MERMAID)}
     />
 
     <div style="float: right">
 
-      <!-- <table style="display: inline;">
-        <tr><td>Type</td><td>Version</td><td>Valid</td></tr>
-        <tr><td>{docType}</td><td>{docTypeVersion}</td><td>{valid}</td></tr>
-      </table> -->
+      <table style="display: inline;">
+        <tr><td>Type</td><td>Version</td><td>Format</td><td>Valid</td></tr>
+        <tr><td>{docGrammar}</td><td>{docGrammarVersion}</td><td>{docFormat}</td><td>{valid}</td></tr>
+      </table>
       
       {#if hasConfluence}
         <button on:click={confluenceSave}>Save</button>
         <button on:click={confluenceCancel}>Cancel</button>
       {/if}
 
-      {#if docFormat == "json" || docFormat == "yaml"}
+      <!-- {#if docFormat == DocumentFormat.JSON || docFormat == DocumentFormat.YAML}
         <button on:click={toggleJsonYaml}>{docFormat}</button>
-      {/if}
+      {/if} -->
     </div>
     
   </nav>
@@ -244,10 +295,12 @@
         </div>
       {/if}
 
-      {#if docType == "asyncapi"}
+      {#if docGrammar == DocumentGrammar.ASYNCAPI}
         <asyncapi-component {schema} config={asyncApiConfig} />
-      {:else if docType == "openapi"}
+      {:else if docGrammar == DocumentGrammar.OPENAPI}
         <SwaggerUiComponent {schema} />
+      {:else if docGrammar == DocumentGrammar.MERMAID}
+        <MermaidUiComponent {schema} />
       {:else}
         <div id="getting-started">
           <h2>Getting Started</h2>

@@ -1,8 +1,9 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import SwaggerUI from "swagger-ui";
+  import type { Schema } from '../lib';
 
-  export let schema;
+  export let schema: Schema;
   let swaggerUi;
 
   $: {
